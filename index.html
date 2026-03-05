@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>i13.buzz — What's Buzzing Right Now</title>
+  <meta name="description" content="Real-time trending from HackerNews & GitHub. Live feed updated every 10 seconds. What's buzzing right now." />
+  <meta name="keywords" content="hacker news trending, github trending, tech news, live feed, i13" />
+  <meta property="og:title" content="i13.buzz — What's Buzzing Right Now" />
+  <meta property="og:description" content="Real-time trending from HackerNews & GitHub. Updated every 10 seconds." />
+  <meta property="og:url" content="https://i13.buzz/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@SpunkArt13" />
+  <meta name="twitter:title" content="i13.buzz — What's Buzzing Right Now" />
+  <meta name="twitter:description" content="Real-time trending from HackerNews & GitHub. Updated every 10 seconds." />
+  <link rel="canonical" href="https://i13.buzz/" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #1a1a2e;
+      --card2: #12121a;
+      --accent: #00f5d4;
+      --accent2: #22c55e;
+      --purple: #bf5af2;
+      --cyan: #00f5d4;
+      --text: #f0f0f0;
+      --muted: #a0a0b8;
+      --border: #2a2a3e;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-text {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--cyan);
+      letter-spacing: -0.5px;
+    }
+
+    .nav-tagline {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: none;
+    }
+
+    @media (min-width: 480px) {
+      .nav-tagline { display: block; }
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-tip {
+      background: linear-gradient(135deg, #bf5af2, #00f5d4);
+      color: #fff;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-tip:hover { opacity: 0.85; }
+
+    /* HERO */
+    .hero {
+      padding: 64px 24px 40px;
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 6vw, 3.4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 28px;
+    }
+
+    /* LIVE INDICATOR */
+    .live-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--cyan);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+
+    .live-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 1px;
+    }
+
+    .live-time {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    @keyframes livePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.5; }
+    }
+
+    @keyframes vtrPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* MAIN GRID */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .feed-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 60px;
+    }
+
+    @media (min-width: 768px) {
+      .feed-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* FEED CARDS */
+    .feed-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .feed-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .feed-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feed-updated {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .feed-body {
+      padding: 16px;
+      min-height: 200px;
+    }
+
+    /* STORY CARDS */
+    .story-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .story-item:last-child { margin-bottom: 0; }
+    .story-item:hover { border-color: var(--cyan); }
+
+    .story-item a.story-link {
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      display: block;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .story-item a.story-link:hover { color: var(--cyan); }
+
+    .story-meta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .story-pts { color: var(--cyan); font-size: 0.74rem; font-weight: 700; }
+    .story-comments, .story-by { color: var(--muted); font-size: 0.74rem; }
+
+    .btn-share-x {
+      margin-left: auto;
+      background: #1d9bf0;
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+
+    .btn-share-x:hover { opacity: 0.85; }
+
+    /* REPO CARDS */
+    .repo-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .repo-item:last-child { margin-bottom: 0; }
+    .repo-item:hover { border-color: var(--purple); }
+
+    .repo-item a.repo-link {
+      color: var(--purple);
+      font-weight: 700;
+      font-size: 0.88rem;
+      text-decoration: none;
+    }
+
+    .repo-item a.repo-link:hover { color: var(--cyan); }
+
+    .repo-desc {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 5px 0 8px;
+      line-height: 1.4;
+    }
+
+    .repo-meta {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .repo-stars { color: #fee440; font-size: 0.74rem; font-weight: 700; }
+    .repo-lang { color: var(--muted); font-size: 0.74rem; }
+
+    /* LOADING STATE */
+    .loading-pulse {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, #353550 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 14px;
+    }
+
+    .skeleton.tall { height: 68px; border-radius: 8px; }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* AFFILIATE SECTION */
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .affiliate-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .affiliate-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      text-decoration: none;
+      transition: border-color 0.2s, transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .affiliate-card:hover {
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .affiliate-icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .affiliate-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .affiliate-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .affiliate-cta {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.5px;
+    }
+
+    /* EMPIRE GRID */
+    .empire-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .empire-link {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .empire-link:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0,245,212,0.07);
+    }
+
+    .empire-link.current {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0,245,212,0.1);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="/">
+      <span class="nav-logo-text">i13.buzz</span>
+      <span class="nav-tagline">What's Buzzing Right Now</span>
+    </a>
+    <div class="nav-actions">
+      <button class="btn-tip" onclick="openTip()">&#x1F9E1; Tip</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="live-bar">
+      <span class="live-dot"></span>
+      <span class="live-label">LIVE</span>
+      <span class="live-time" id="hero-time">Loading...</span>
+    </div>
+    <h1>What's Trending Right Now</h1>
+    <p>Live feed from HackerNews &amp; GitHub. Updates every 10 seconds.</p>
+  </div>
+
+  <!-- MAIN FEEDS -->
+  <div class="container">
+    <div class="feed-grid">
+
+      <!-- HACKER NEWS -->
+      <div class="feed-card">
+        <div class="feed-header">
+          <div class="feed-title">&#x1F525; Hacker News</div>
+          <span class="feed-updated" id="hn-updated">Fetching...</span>
+        </div>
+        <div class="feed-body" id="hn-feed">
+          <div class="loading-pulse">
+            <div class="skeleton tall"></div>
+            <div class="skeleton tall"></div>
+            <div class="skeleton tall"></div>
+            <div class="skeleton" style="height:10px;width:60%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GITHUB -->
+      <div class="feed-card">
+        <div class="feed-header">
+          <div class="feed-title">&#x2B50; GitHub Trending</div>
+          <span class="feed-updated" id="gh-updated">Fetching...</span>
+        </div>
+        <div class="feed-body" id="github-feed">
+          <div class="loading-pulse">
+            <div class="skeleton tall"></div>
+            <div class="skeleton tall"></div>
+            <div class="skeleton tall"></div>
+            <div class="skeleton" style="height:10px;width:60%;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- AFFILIATES -->
+    <div class="section">
+      <div class="section-title">&#x1F6E0; Tools for Builders</div>
+      <div class="affiliate-grid">
+
+        <a class="affiliate-card" href="https://www.fiverr.com/s/spunkart" target="_blank" rel="noopener">
+          <div class="affiliate-icon">&#x1F3AD;</div>
+          <div class="affiliate-name">Fiverr</div>
+          <div class="affiliate-desc">Hire freelancers for any project, instantly.</div>
+          <div class="affiliate-cta">Get Started &rarr;</div>
+        </a>
+
+        <a class="affiliate-card" href="https://app.leonardo.ai/?via=spunkart" target="_blank" rel="noopener">
+          <div class="affiliate-icon">&#x1F3A8;</div>
+          <div class="affiliate-name">Leonardo AI</div>
+          <div class="affiliate-desc">Generate stunning AI images and assets.</div>
+          <div class="affiliate-cta">Try Free &rarr;</div>
+        </a>
+
+        <a class="affiliate-card" href="https://www.canva.com/join/spunkart" target="_blank" rel="noopener">
+          <div class="affiliate-icon">&#x1F4D0;</div>
+          <div class="affiliate-name">Canva</div>
+          <div class="affiliate-desc">Design anything. Publish anywhere.</div>
+          <div class="affiliate-cta">Design Free &rarr;</div>
+        </a>
+
+        <a class="affiliate-card" href="https://www.make.com/en/register?pc=spunk" target="_blank" rel="noopener">
+          <div class="affiliate-icon">&#x26A1;</div>
+          <div class="affiliate-name">Make.com</div>
+          <div class="affiliate-desc">Automate workflows without code.</div>
+          <div class="affiliate-cta">Automate Now &rarr;</div>
+        </a>
+
+        <a class="affiliate-card" href="https://coinbase.com/join/YAGES3X?src=referral-link" target="_blank" rel="noopener">
+          <div class="affiliate-icon">&#x20BF;</div>
+          <div class="affiliate-name">Coinbase</div>
+          <div class="affiliate-desc">Buy, sell, and grow your crypto portfolio.</div>
+          <div class="affiliate-cta">Join &rarr;</div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- EMPIRE GRID -->
+    <div class="section">
+      <div class="section-title">&#x1F310; The Full Network</div>
+      <div class="empire-grid">
+        <a class="empire-link" href="https://spunk.bet" target="_blank" rel="noopener">spunk.bet</a>
+        <a class="empire-link" href="https://pfp.best" target="_blank" rel="noopener">pfp.best</a>
+        <a class="empire-link" href="https://spunkart.com" target="_blank" rel="noopener">spunkart.com</a>
+        <a class="empire-link" href="https://13.money" target="_blank" rel="noopener">13.money</a>
+        <a class="empire-link" href="https://13.markets" target="_blank" rel="noopener">13.markets</a>
+        <a class="empire-link" href="https://13.golf" target="_blank" rel="noopener">13.golf</a>
+        <a class="empire-link" href="https://13.energy" target="_blank" rel="noopener">13.energy</a>
+        <a class="empire-link" href="https://13.dance" target="_blank" rel="noopener">13.dance</a>
+        <a class="empire-link" href="https://free.institute" target="_blank" rel="noopener">free.institute</a>
+        <a class="empire-link" href="https://free.gripe" target="_blank" rel="noopener">free.gripe</a>
+        <a class="empire-link" href="https://chicago.coach" target="_blank" rel="noopener">chicago.coach</a>
+        <a class="empire-link" href="https://predict.horse" target="_blank" rel="noopener">predict.horse</a>
+        <a class="empire-link" href="https://predict.pics" target="_blank" rel="noopener">predict.pics</a>
+        <a class="empire-link" href="https://predict.mom" target="_blank" rel="noopener">predict.mom</a>
+        <a class="empire-link" href="https://predict.codes" target="_blank" rel="noopener">predict.codes</a>
+        <a class="empire-link" href="https://predict.boats" target="_blank" rel="noopener">predict.boats</a>
+        <a class="empire-link" href="https://predict.yachts" target="_blank" rel="noopener">predict.yachts</a>
+        <a class="empire-link" href="https://predict.gay" target="_blank" rel="noopener">predict.gay</a>
+        <a class="empire-link" href="https://predict.autos" target="_blank" rel="noopener">predict.autos</a>
+        <a class="empire-link" href="https://predict.beauty" target="_blank" rel="noopener">predict.beauty</a>
+        <a class="empire-link" href="https://predict.christmas" target="_blank" rel="noopener">predict.christmas</a>
+        <a class="empire-link" href="https://alien.best" target="_blank" rel="noopener">alien.best</a>
+        <a class="empire-link" href="https://alien.beauty" target="_blank" rel="noopener">alien.beauty</a>
+        <a class="empire-link" href="https://alien.boutique" target="_blank" rel="noopener">alien.boutique</a>
+        <a class="empire-link" href="https://plush.best" target="_blank" rel="noopener">plush.best</a>
+        <a class="empire-link" href="https://plush.surf" target="_blank" rel="noopener">plush.surf</a>
+        <a class="empire-link" href="https://plush.beer" target="_blank" rel="noopener">plush.beer</a>
+        <a class="empire-link" href="https://plush.cam" target="_blank" rel="noopener">plush.cam</a>
+        <a class="empire-link" href="https://plush.christmas" target="_blank" rel="noopener">plush.christmas</a>
+        <a class="empire-link" href="https://plush.courses" target="_blank" rel="noopener">plush.courses</a>
+        <a class="empire-link" href="https://plush.mom" target="_blank" rel="noopener">plush.mom</a>
+        <a class="empire-link" href="https://clown.best" target="_blank" rel="noopener">clown.best</a>
+        <a class="empire-link" href="https://clown.surf" target="_blank" rel="noopener">clown.surf</a>
+        <a class="empire-link" href="https://clown.cam" target="_blank" rel="noopener">clown.cam</a>
+        <a class="empire-link" href="https://clown.sbs" target="_blank" rel="noopener">clown.sbs</a>
+        <a class="empire-link" href="https://iai.autos" target="_blank" rel="noopener">iai.autos</a>
+        <a class="empire-link" href="https://iai.boats" target="_blank" rel="noopener">iai.boats</a>
+        <a class="empire-link" href="https://i13.best" target="_blank" rel="noopener">i13.best</a>
+        <a class="empire-link current" href="https://i13.buzz" target="_blank" rel="noopener">i13.buzz</a>
+        <a class="empire-link" href="https://i13.autos" target="_blank" rel="noopener">i13.autos</a>
+        <a class="empire-link" href="https://i13.lat" target="_blank" rel="noopener">i13.lat</a>
+        <a class="empire-link" href="https://i13.pics" target="_blank" rel="noopener">i13.pics</a>
+        <a class="empire-link" href="https://i13.space" target="_blank" rel="noopener">i13.space</a>
+        <a class="empire-link" href="https://ai13.fun" target="_blank" rel="noopener">ai13.fun</a>
+        <a class="empire-link" href="https://ai13.store" target="_blank" rel="noopener">ai13.store</a>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- FOOTER -->
+  <footer>
+    <div>&copy; 2026 i13 Network &mdash; Built with AI by one person.</div>
+    <div class="footer-links">
+      <a href="https://twitter.com/SpunkArt13" target="_blank" rel="noopener">@SpunkArt13</a>
+      <a href="https://spunkart.com" target="_blank" rel="noopener">SpunkArt.com</a>
+      <a href="https://spunk.bet" target="_blank" rel="noopener">Spunk.bet</a>
+      <a href="#" onclick="openTip();return false;">Tip the Builder</a>
+    </div>
+  </footer>
+
+  <!-- TIP MODAL -->
+  <div id="tip-modal" onclick="if(event.target===this)closeTip()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;z-index:10000;">
+    <div style="background:#1a1a2e;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;">
+      <h3 style="color:#f0f0f0;margin-bottom:8px;">&#x1F9E1; Tip Spunk</h3>
+      <p style="color:#a0a0b8;font-size:0.9rem;margin-bottom:20px;">Built by one person with AI. Every tip keeps these sites free forever. &#x1F9E1;</p>
+      <div id="tip-addr" onclick="copyTip()" style="background:#0a0a0f;border:1px solid #2a2a3e;border-radius:8px;padding:12px;font-family:monospace;font-size:0.75rem;color:#00f5d4;word-break:break-all;cursor:pointer;margin-bottom:8px;">bc1pkepg42ctsvsxk499qu02qqyyz88gwjchnjpsu22wmng9rhpfv3jqw2t2hm</div>
+      <p style="color:#a0a0b8;font-size:0.8rem;margin-bottom:16px;">Click to copy &bull; Bitcoin (BTC)</p>
+      <button onclick="closeTip()" style="background:#2a2a3e;color:#f0f0f0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;">Close</button>
+    </div>
+  </div>
+
+  <!-- VTR BADGE -->
+  <div style="position:fixed;bottom:12px;right:12px;background:#1a1a2e;border:1px solid #2a2a3e;border-radius:20px;padding:6px 14px;font-size:12px;color:#a0a0b8;z-index:9999;display:flex;align-items:center;gap:6px;" id="vtr-badge">
+    <span style="width:7px;height:7px;border-radius:50%;background:#00f5d4;animation:vtrPulse 2s infinite;display:inline-block;"></span>
+    <span id="vtr-count">...</span>
+  </div>
+
+  <script>
+    /* ── TIP MODAL ─────────────────────────────────────────── */
+    function openTip() {
+      var m = document.getElementById('tip-modal');
+      if (m) { m.style.display = 'flex'; }
+    }
+    function closeTip() {
+      var m = document.getElementById('tip-modal');
+      if (m) { m.style.display = 'none'; }
+    }
+    function copyTip() {
+      navigator.clipboard.writeText('bc1pkepg42ctsvsxk499qu02qqyyz88gwjchnjpsu22wmng9rhpfv3jqw2t2hm').then(function () {
+        var el = document.getElementById('tip-addr');
+        if (el) {
+          var o = el.textContent;
+          el.textContent = '✓ Copied!';
+          setTimeout(function () { el.textContent = o; }, 2000);
+        }
+      }).catch(function () {});
+    }
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTip(); });
+
+    /* ── VTR BADGE ─────────────────────────────────────────── */
+    (function () {
+      if (window._vtrInit) return;
+      window._vtrInit = true;
+      var DB = 'https://predict-network-ec767-default-rtdb.firebaseio.com';
+      var site = (location.hostname || 'local').replace(/\./g, '_').replace(/[#$\[\]]/g, '_');
+      var sid = 's' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      var sRef = DB + '/vtr/' + site + '/s/' + sid + '.json';
+      var allRef = DB + '/vtr/' + site + '/s.json';
+      var now = Date.now;
+      function ping() {
+        fetch(sRef, { method: 'PUT', body: JSON.stringify({ t: now() }), headers: { 'Content-Type': 'application/json' } }).catch(function () {});
+      }
+      function refresh() {
+        fetch(allRef).then(function (r) { return r.json(); }).then(function (d) {
+          var n = 1;
+          if (d && typeof d === 'object') {
+            var vals = Object.values(d);
+            n = Math.max(1, vals.filter(function (v) { return v && v.t && (now() - v.t) < 25000; }).length);
+            Object.entries(d).forEach(function (e) {
+              if (e[1] && e[1].t && (now() - e[1].t) > 60000) {
+                fetch(DB + '/vtr/' + site + '/s/' + e[0] + '.json', { method: 'DELETE' }).catch(function () {});
+              }
+            });
+          }
+          var el = document.getElementById('vtr-count');
+          if (el) el.textContent = n + (n === 1 ? ' visitor' : ' visitors') + ' online';
+        }).catch(function () {
+          var el = document.getElementById('vtr-count');
+          if (el) el.textContent = '1 visitor online';
+        });
+      }
+      var day = new Date().toISOString().slice(0, 10);
+      var hRef = DB + '/vtr/' + site + '/hits/' + day + '.json';
+      fetch(hRef).then(function (r) { return r.json(); }).then(function (n) {
+        fetch(hRef, { method: 'PUT', body: JSON.stringify((n || 0) + 1), headers: { 'Content-Type': 'application/json' } }).catch(function () {});
+      }).catch(function () {});
+      window.addEventListener('pagehide', function () {
+        fetch(sRef, { method: 'DELETE', keepalive: true }).catch(function () {});
+      });
+      ping(); refresh();
+      setInterval(function () { ping(); refresh(); }, 10000);
+    })();
+
+    /* ── LIVE CLOCK ────────────────────────────────────────── */
+    function updateHeroTime() {
+      var el = document.getElementById('hero-time');
+      if (el) el.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+    }
+    updateHeroTime();
+
+    /* ── HN FEED ───────────────────────────────────────────── */
+    async function loadHN() {
+      try {
+        var ids = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json').then(function (r) { return r.json(); });
+        var top = ids.slice(0, 10);
+        var stories = await Promise.all(
+          top.map(function (id) {
+            return fetch('https://hacker-news.firebaseio.com/v0/item/' + id + '.json').then(function (r) { return r.json(); });
+          })
+        );
+        var filtered = stories.filter(function (s) { return s && s.title; });
+        renderHN(filtered);
+      } catch (e) {
+        console.log('HN error', e);
+        var el = document.getElementById('hn-feed');
+        if (el) el.innerHTML = '<p style="color:#a0a0b8;text-align:center;padding:20px;">Could not load stories. Retrying...</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function renderHN(stories) {
+      var el = document.getElementById('hn-feed');
+      if (!el || !stories.length) return;
+      var html = stories.map(function (s) {
+        var url = s.url || ('https://news.ycombinator.com/item?id=' + s.id);
+        var shareText = encodeURIComponent(s.title + ' ' + url);
+        var shareUrl = 'https://twitter.com/intent/tweet?text=' + shareText + '&via=SpunkArt13';
+        return '<div class="story-item">' +
+          '<a class="story-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(s.title) + '</a>' +
+          '<div class="story-meta">' +
+          '<span class="story-pts">&#x25B2; ' + (s.score || 0) + ' pts</span>' +
+          '<span class="story-comments">&#x1F4AC; ' + (s.descendants || 0) + '</span>' +
+          '<span class="story-by">by ' + escapeHtml(s.by || 'unknown') + '</span>' +
+          '<a class="btn-share-x" href="' + shareUrl + '" target="_blank" rel="noopener">Share</a>' +
+          '</div></div>';
+      }).join('');
+      el.innerHTML = html;
+      var upd = document.getElementById('hn-updated');
+      if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }
+
+    /* ── GITHUB FEED ───────────────────────────────────────── */
+    async function loadGitHub() {
+      try {
+        var today = new Date();
+        today.setDate(today.getDate() - 7);
+        var dateStr = today.toISOString().slice(0, 10);
+        var data = await fetch(
+          'https://api.github.com/search/repositories?q=pushed:>' + dateStr + '&sort=stars&order=desc&per_page=5'
+        ).then(function (r) { return r.json(); });
+        var el = document.getElementById('github-feed');
+        if (!el || !data.items) return;
+        var html = data.items.map(function (r) {
+          return '<div class="repo-item">' +
+            '<a class="repo-link" href="' + escapeHtml(r.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(r.full_name) + '</a>' +
+            '<p class="repo-desc">' + escapeHtml(r.description || 'No description') + '</p>' +
+            '<div class="repo-meta">' +
+            '<span class="repo-stars">&#x2B50; ' + (r.stargazers_count || 0).toLocaleString() + '</span>' +
+            (r.language ? '<span class="repo-lang">' + escapeHtml(r.language) + '</span>' : '') +
+            '</div></div>';
+        }).join('');
+        el.innerHTML = html;
+        var upd = document.getElementById('gh-updated');
+        if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        console.log('GitHub error', e);
+        var el = document.getElementById('github-feed');
+        if (el) el.innerHTML = '<p style="color:#a0a0b8;text-align:center;padding:20px;">Could not load repos. Retrying...</p>';
+      }
+    }
+
+    /* ── HEARTBEAT ─────────────────────────────────────────── */
+    function heartbeat() {
+      loadHN();
+      loadGitHub();
+      updateHeroTime();
+    }
+
+    heartbeat();
+    setInterval(heartbeat, 10000);
+  </script>
+
+</body>
+</html>
